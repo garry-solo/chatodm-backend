@@ -71,4 +71,43 @@ async function replyToComment(commentId, replyText) {
   }
 }
 
-module.exports = { sendDirectMessage, replyToComment };
+/**
+ * Comment ke response mein "Private Reply" bhejta hai — ye normal DM se alag hai.
+ * Normal DM sirf tab jaata hai jab user pehle khud message kar chuka ho
+ * (24-hour messaging window). Lekin comment ka private reply is restriction
+ * ko bypass karta hai — Instagram isse "customer service ka jawab" maanta hai,
+ * bas comment ke 7 din ke andar bhejna zaroori hai.
+ *
+ * @param {string} commentId - jis comment ke jawab mein DM bhejna hai
+ * @param {string} messageText - jo message bhejna hai
+ */
+async function sendPrivateReplyToComment(commentId, messageText) {
+  const url = `https://graph.instagram.com/${GRAPH_API_VERSION}/${IG_BUSINESS_ACCOUNT_ID}/messages`;
+
+  try {
+    const response = await axios.post(
+      url,
+      {
+        recipient: { comment_id: commentId },
+        message: { text: messageText },
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${ACCESS_TOKEN}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    console.log(`✅ Private reply bhej diya comment (${commentId}) par:`, response.data);
+    return response.data;
+  } catch (err) {
+    console.error(
+      '❌ Private reply bhejte waqt error aaya:',
+      err.response?.data || err.message
+    );
+    throw err;
+  }
+}
+
+module.exports = { sendDirectMessage, replyToComment, sendPrivateReplyToComment };
