@@ -6,6 +6,11 @@ const { sendDirectMessage, replyToComment, sendPrivateReplyToComment } = require
 const { getAutomationRules } = require('../services/rulesEngine');
 const { getStage, setStage, STAGE } = require('../services/conversationState');
 
+// Hamara khud ka business account ID — isse aane wale ya isko bheje gaye
+// "echo" events ko ignore karne ke liye use karenge, taaki bot khud ke
+// messages/comments ko dobara process na kare (infinite loop se bachne ke liye).
+const IG_BUSINESS_ACCOUNT_ID = process.env.IG_BUSINESS_ACCOUNT_ID;
+
 /**
  * Instagram se aane wala poora webhook payload yahan process hota hai.
  * Payload structure Meta ke docs ke hisaab se hota hai:
@@ -44,8 +49,16 @@ async function handleWebhookEvent(body) {
 async function handleDirectMessage(messagingEvent) {
   const senderId = messagingEvent.sender?.id;
   const messageText = messagingEvent.message?.text;
+  const isEcho = messagingEvent.message?.is_echo;
 
   if (!senderId || !messageText) return;
+
+  // Ye humara khud ka bheja hua message hai (echo) — ignore karein,
+  // warna bot khud ke messages ko process karke ulta-seedha react karega.
+  if (isEcho || senderId === IG_BUSINESS_ACCOUNT_ID) {
+    console.log(`↩️ Apna khud ka message (echo) ignore kiya: "${messageText}"`);
+    return;
+  }
 
   console.log(`📩 New DM from ${senderId}: "${messageText}"`);
 
@@ -96,6 +109,13 @@ async function handleComment(commentData) {
   const commentText = commentData.text;
 
   if (!commenterId || !commentText) return;
+
+  // Ye humara khud ka bheja hua public reply hai, jo Instagram naye comment
+  // ki tarah wapas bhej deta hai — ignore karein, warna infinite loop bane sakta hai.
+  if (commenterId === IG_BUSINESS_ACCOUNT_ID) {
+    console.log(`↩️ Apna khud ka comment (echo) ignore kiya: "${commentText}"`);
+    return;
+  }
 
   console.log(`💬 New comment from ${commenterId}: "${commentText}"`);
 
