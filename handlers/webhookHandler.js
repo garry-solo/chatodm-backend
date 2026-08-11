@@ -2,7 +2,7 @@
 // uska type kya hai (comment / DM / story mention) aur uspar
 // kya action lena hai.
 
-const { sendDirectMessage, replyToComment } = require('../services/instagramApi');
+const { sendDirectMessage, replyToComment, sendPrivateReplyToComment } = require('../services/instagramApi');
 const { getAutomationRules } = require('../services/rulesEngine');
 const { getStage, setStage, STAGE } = require('../services/conversationState');
 
@@ -112,10 +112,12 @@ async function handleComment(commentData) {
   }
 
   // Private DM follow-gate ke saath (LINK ka jawab seedha nahi, pehle follow-ask)
+  // Comment id use kar rahe hain (normal user id nahi) taaki messaging window
+  // restriction bypass ho — Instagram ka "Private Reply" feature.
   if (matchedRule.followGated) {
     setStage(commenterId, STAGE.ASKED_TO_FOLLOW);
   }
-  await sendDirectMessage(commenterId, matchedRule.replyMessage);
+  await sendPrivateReplyToComment(commentId, matchedRule.replyMessage);
 }
 
 module.exports = { handleWebhookEvent };
